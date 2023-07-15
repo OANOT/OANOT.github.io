@@ -12,7 +12,7 @@ title: Blogs
 
 ### 2022
 
-- [20岁，宽心且看月中桂](https://caihanlin.com/blogs/Lake_1_1)<br>
+- [20岁，宽心且看月中桂](https://oanot.com/blogs/Lake_1_1)<br>
 - [Cambridge 线上暑研回忆录](https://caihanlin.com/blogs/cambridge/)<br>
 - [暂停、暂停、暂停](https://caihanlin.com/blogs/stop/)
 
@@ -33,13 +33,5 @@ title: Blogs
 - [Lance的知乎付费咨询](https://www.zhihu.com/consult/people/1135256969806925824)<br>
 - [数学建模训练营](https://caihanlin.com/blogs/modeling)<br>
 - 本科飞跃计划 (Under Working)
-
-<br>
-
-## Leave a Message
-
-<br>
-
-{% include disqus.html %} 
 
 <br>
