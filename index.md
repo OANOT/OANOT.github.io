@@ -4,7 +4,7 @@ layout: page
 
 # About Me
 
-<img src="https://caihanlin.com/caihanlin.jpg" class="floatpic" width="360" height="480">
+<img src="https://oanot.com/pingzhao.jpg" class="floatpic" width="360" height="480">
 
 Here is ** Ping Zhao (Lance, [赵平](https://caihanlin.com/file/蔡汉霖简历.pdf))**.
 

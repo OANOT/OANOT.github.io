@@ -12,7 +12,7 @@ title: Blogs
 
 ### 2022
 
-- [20岁，宽心且看月中桂](https://oanot.com/blogs/Lake_1_1)<br>
+- [20岁，宽心且看月中桂](https://oanot.com/blogs/test)<br>
 - [Cambridge 线上暑研回忆录](https://caihanlin.com/blogs/cambridge/)<br>
 - [暂停、暂停、暂停](https://caihanlin.com/blogs/stop/)
 
