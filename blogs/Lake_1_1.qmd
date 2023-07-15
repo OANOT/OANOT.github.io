@@ -1,0 +1,272 @@
+---
+title: "Lake_1分层分类"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+
+## README
+
+This code is used for vegetation classification of Lake 1 sample plot. 
+
+## Running Code
+
+```{r}
+#| label: packages load
+#| echo: false
+#| warning: false
+#| output: false
+
+library(terra)
+library(randomForest)
+library(caret)
+library(e1071)
+library(pROC)
+library(RColorBrewer)
+library(forestError)
+library(ranger)
+library(sampling)
+library(tidyft)
+```
+
+The following code defines the required  vegetation classification function.
+
+```{r}
+#| label: vegetation classification function
+
+order_classification_model <- function(){
+  # 根据种名赋值目类别
+  # sample_vectors[sample_vectors$species == '0','order'] <<- '0'
+  sample_vectors[sample_vectors$species == '011','order'] <<- '2'
+  sample_vectors[sample_vectors$species == '021','order'] <<- '1'
+  sample_vectors[sample_vectors$species == '031','order'] <<- '3'
+  sample_vectors[sample_vectors$species == '041','order'] <<- '4'
+  sample_vectors[sample_vectors$species == '051','order'] <<- '2'
+  sample_vectors[sample_vectors$species == '061','order'] <<- '3'
+  sample_vectors[sample_vectors$species == '071','order'] <<- '1'
+  sample_vectors[sample_vectors$species == '081','order'] <<- '5'
+  sample_vectors[sample_vectors$species == '091','order'] <<- '5'
+  sample_vectors[sample_vectors$species == '101','order'] <<- '1'
+  sample_vectors[sample_vectors$species == '102','order'] <<- '1'
+  sample_vectors[sample_vectors$species == '111','order'] <<- '6'
+  sample_vectors[sample_vectors$species == '121','order'] <<- '7'
+  sample_vectors[sample_vectors$species == '131','order'] <<- '8'
+  sample_vectors[sample_vectors$species == '141','order'] <<- '9'
+  # sample_vectors[sample_vectors$species == '151','order'] <<- '3'
+  
+  
+  # 目分类代码
+  set.seed(1234)
+  sampdata_model <- na.omit(sample_vectors)
+  sampdata_model$species <- as.factor(sampdata_model$species)
+  sampdata_model$order <- as.factor(sampdata_model$order)
+  sample_num <- summary(sampdata_model$species)/10*7
+  sample_order <- unique(sampdata_model$species)
+  sample_num <- sample_num[sample_order]
+  sub_train <- strata(sampdata_model, stratanames=("species"), size = sample_num, method="srswor")
+  train_data <<- sampdata_model[sub_train$ID_unit,]
+  test_data <<- sampdata_model[-sub_train$ID_unit,]
+
+  order_randomforest <- randomForest(order~red+green+blue+ExG+VDVI+NGRDI+NGBDI+RGRI+Mean+Variance+Homogeneity+Contrast+Dissimilarity+Entroy+Second_moment+Correlation,
+                                     data = train_data,
+                                     na.action = na.omit,
+                                     ntree =60,
+                                     #mtry=50,
+                                     importance=TRUE ,
+                                     # keep.inbag=TRUE,
+                                     proximity=TRUE
+                                     )
+
+
+  plot(order_randomforest)
+  # order_randomforest$importance
+  # varImpPlot(order_randomforest, main = "variable importance")
+  #对测试集进行预测
+  # err = quantForestError(order_randomforest,train_data,test_data)
+  # mdl = ranger(order~red+green+blue+ExG+VDVI+NGRDI+NGBDI+RGRI+Mean+Variance+Homogeneity+Contrast+Dissimilarity+Entroy+Second_moment+Correlation,data=train_data,keep.inbag = TRUE,probability=TRUE)
+  # 
+  # pred = predict(mdl, test_data, type="se")
+  # 
+  # head(cbind(pred$predictions,pred$se ))
+  
+  pre_ran <- predict(order_randomforest,newdata=test_data)
+  #输出混淆矩阵
+  print(cft <- table(test_data$order,pre_ran,dnn=c("真实值","预测值")))
+  # conf_Mat <- confusionMatrix(cft, positive = NULL)
+  
+  # s <- conf_Mat[["byClass"]]
+  # print(Precision_list <- s[,"Precision"])
+  # sprintf("Precision: %.2f",Precision <- mean(Precision_list, na.rm =T))
+  # print(Recall_list <- s[,"Recall"])
+  # sprintf("Recall: %.2f", Recall <- mean(Recall_list, na.rm =T))
+  # print(F1_list <- s[,"F1"])
+  # sprintf("F1: %.2f",F1 <- mean(F1_list, na.rm =T))
+  # sprintf("F1: %.2f",F1 <- 2*Recall*Precision/(Recall+Precision))
+  
+  train_data$order <<- as.character(train_data$order)
+  train_data$species <<- as.character(train_data$species)
+  train_data$pre_order <<- train_data$order
+  train_data$pre_spe <<- train_data$species
+  
+  test_data$order <<- as.character(test_data$order)
+  test_data$species <<- as.character(test_data$species)
+  test_data$pre_order <<- as.character(pre_ran)
+  test_data$pre_spe <<- as.character(pre_ran)
+  return (order_randomforest)
+}
+
+order_classification <- function(order_model, order_vectors){
+  classified <- predict(order_model, order_vectors)
+  order_vectors$pre_order <- as.character(classified)
+  order_vectors$pre_spe <- as.character(classified)
+  return (order_vectors)
+}
+
+species_classification_model_1 <- function(order_number){
+  # 提取某一目的标记样本
+  train_data_temp <- train_data[train_data$order == order_number,]
+  test_data_temp <- test_data[test_data$order == order_number,]
+  train_data_temp$species <- as.factor(train_data_temp$species)
+  test_data_temp$species <- as.factor(test_data_temp$species)
+  
+  species_randomforest <- randomForest(species ~ red+green+blue+ExG+VDVI+NGRDI+NGBDI+RGRI+Mean+Variance+Homogeneity+Contrast+Dissimilarity+Entroy+Second_moment+Correlation,
+                                       data = train_data_temp,
+                                       na.action = na.omit(NULL),
+                                       ntree =50,
+                                       # mtry=5,
+                                       importance=TRUE ,
+                                       proximity=TRUE)
+  
+  #对测试集进行预测
+  pre_ran_temp <- predict(species_randomforest,newdata=test_data_temp)
+  #输出混淆矩阵
+  print(cft_temp <- table(test_data_temp$species,pre_ran_temp,dnn=c("真实值","预测值")))
+  # conf_Mat_temp <- confusionMatrix(cft_temp, positive = NULL)
+  
+  # 预测验证样本的种类
+  test_data_predict_temp <- test_data[test_data$pre_order == order_number,]
+  test_data_classified <- predict(species_randomforest, test_data_predict_temp)
+  test_data[test_data$pre_order == order_number,]$pre_spe <<-as.character(test_data_classified)
+  return (species_randomforest)
+}
+
+species_classification_model_2 <- function(order_number){
+  # 预测验证样本的种类
+  test_data_predict_temp <- test_data[test_data$pre_order == order_number,]
+  test_data[test_data$pre_order == order_number,]$pre_spe <<- rep(test_data_predict_temp$species[1],each=length(test_data_predict_temp))
+}
+
+species_classification <- function(order_number){
+  unclassified_temp <- species_unclassified[species_unclassified$pre_order == order_number,]
+  if (nlevels(as.factor(sample_vectors[sample_vectors$order == order_number]$species)) > 1){
+    classified_temp <- predict(species_model[[order_number]], newdata=unclassified_temp)
+    species_unclassified[species_unclassified$pre_order == order_number,]$pre_spe  <<- as.character(classified_temp)
+  }
+  else if(nlevels(as.factor(sample_vectors[sample_vectors$order == order_number]$species)) == 1){
+    # 对待分类样本分类
+    species_unclassified[species_unclassified$pre_order == order_number,]$pre_spe <<- rep(sample_vectors[sample_vectors$order == order_number,]$species[1],each=length(unclassified_temp))
+  }
+}
+```
+
+## Basic parameter settings
+
+```{r}
+#| label: Basic parameter settings
+
+setwd("D:/0_Class/Lake_1_1/")
+image <- rast("D:/0_Class/Lake_1_1/I_Lake_1_1.tif")
+```
+
+## Extract classification samples
+
+```{r}
+#| label: Extract classification samples
+
+for(i in 7:7){
+  vector_temp <- vect(paste(r"(D:\0_Class\Lake_1_1\vector\V_Lake_1_1_)", i ,".shp",sep = ''))
+  if(!exists("sample_vectors") | i == 0){
+    sample_vectors <<- vector_temp[!is.na(vector_temp$species),]
+    print("创建sample_vectors!")
+  }
+  else{
+    sample_vectors <<- rbind(sample_vectors, vector_temp[!is.na(vector_temp$species),])
+    print(paste0("向sample_vectors加入V_Lake_1_1_", i ,".shp的样本文件"))
+  }
+}
+
+var_names <- c("ObjRaster", "ID","red", "green", "blue", "ExG", "VDVI", "NGRDI", "NGBDI", "RGRI", "Mean", "Variance", "Homogeneity", "Contrast", "Dissimilarity", "Entroy", "Second_moment", "Correlation", "species", "order")
+names(sample_vectors) <- var_names
+sample_table <- data.frame(sample_vectors)
+sample_table[is.na(sample_table)] <- 0
+values(sample_vectors) <- sample_table
+```
+
+## Training classification models
+
+```{r}
+#| label: Training classification models
+
+order_model <- order_classification_model()
+species_model <- list()
+# ss <- species_model[[1]]
+for(i in levels(as.factor(sample_vectors$order))){
+  if(nlevels(as.factor(sample_vectors[sample_vectors$order == i]$species)) > 1){
+    species_model <- append(species_model,list(species_classification_model_1(i)))
+  }
+  else if(nlevels(as.factor(sample_vectors[sample_vectors$order == i]$species)) == 1){
+    species_model <- append(species_model,list(species_classification_model_2(i)))
+  }
+}
+names(species_model) <- levels(as.factor(sample_vectors$order))
+```
+
+## Perform classification based on the model
+
+```{r}
+#| label: Perform classification based on the model
+
+for(j in 7:7) {
+  
+  order_unclassified <- vect(paste(r"(D:\0_Class\Lake_1_1\vector\V_Lake_1_1_)", j ,".shp",sep = ''))
+  image_ref <- crop(image, order_unclassified)
+  names(order_unclassified) <- var_names
+  vector_table <- data.frame(order_unclassified)
+  vector_table[is.na(vector_table)] <- 0
+  values(order_unclassified) <- vector_table
+  # 分类1：对目进行分类
+  species_unclassified <- order_classification(order_model, order_unclassified)
+  
+  print("分类1完成！")
+  
+  # 分类2：对种进行分类
+  for(k in levels((as.factor(sample_vectors$order)))){
+    species_classification(k)
+  }
+  print("分类2完成！")
+  
+  print("开始栅格化。")
+  species_unclassified$pre_order <- as.numeric(species_unclassified$pre_order)
+  sys_time_print({
+    class_raster1 <- rasterize(species_unclassified, image_ref, field = "pre_order", 
+    filename = paste0(r"(D:\0_Class\Lake_1_1\result\3\order_raster_)", j ,".tif")) 
+  })
+  print(paste0("order_raster_", j ,".tif", "处理完成！"))
+  
+  species_unclassified$pre_spe <- as.numeric(species_unclassified$pre_spe)
+  # species_unclassified[species_unclassified$pre_spe < 20,'pre_spe'] <- 11
+  # species_unclassified[species_unclassified$pre_spe < 60 & species_unclassified$pre_spe > 50,'pre_spe'] <- 51
+  # species_unclassified[species_unclassified$pre_spe < 80 & species_unclassified$pre_spe > 70,'pre_spe'] <- 71
+  sys_time_print({
+      class_raster2 <- rasterize(species_unclassified, image, field = "pre_spe",
+      filename = paste0(r"(D:\0_Class\Lake_1_1\result\3\species_raster_)", j ,".tif")) 
+  })
+  # col <- colorRampPalette(brewer.pal(8,'Accent'))(17)
+  # plot(class_raster,col=col)
+  print(paste0("species_raster_", j ,".tif", "处理完成！"))
+}
+```
+
